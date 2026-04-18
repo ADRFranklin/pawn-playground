@@ -52,4 +52,8 @@ jobs:
 
       - name: Build and push image
         if: github.event_name == 'push'
-        run: earthly --push --no-output --build-arg TAG=${{ steps.meta.outputs.tag }} +docker
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          earthly --push --no-output --build-arg TAG=${{ steps.meta.outputs.tag }} +docker
