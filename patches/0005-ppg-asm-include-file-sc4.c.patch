@@ -1,0 +1,14 @@
+--- /tmp/repos/compiler/source/compiler/sc4.c
++++ compiler/sc4.c
+@@ -263,6 +263,11 @@
+ 
+ SC_FUNC void setfiledirect(char *name)
+ {
++  if (sc_asmfile) {
++    stgwrite("; file ");
++    stgwrite(name);
++    stgwrite("\n");
++  } /* if */
+   if (sc_status==statSECOND && sc_listing) {
+     assert(name!=NULL);
+     pc_writeasm(outf,"\n#file \"");

@@ -1,0 +1,21 @@
+services:
+  playground:
+    image: ghcr.io/adrfranklin/pawn-playground:latest
+    container_name: pawn-playground
+    restart: unless-stopped
+    ports:
+      - "7070:7070"
+    volumes:
+      - playground-data:/data
+    environment:
+      - PLAYGROUND_ADDR=:7070
+      - PLAYGROUND_DB=/data/playground.db
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7070/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  playground-data:

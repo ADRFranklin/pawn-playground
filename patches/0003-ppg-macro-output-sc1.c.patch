@@ -1,0 +1,14 @@
+--- /tmp/repos/compiler/source/compiler/sc1.c
++++ compiler/sc1.c
+@@ -1209,6 +1209,11 @@
+           invalid_option(ptr);
+         sc_listing=TRUE;        /* skip second pass & code generation */
+         break;
++      case 'm':
++        if (*(ptr+1)!='\0')
++          invalid_option(ptr);
++        sc_macros=TRUE;         /* output macro replacements */
++        break;
+       case 'o':
+         if (oname)
+           strlcpy(oname,option_value(ptr),_MAX_PATH); /* set name of (binary) output file */

@@ -1,0 +1,17 @@
+--- /tmp/repos/compiler/source/amx/amxcons.h
++++ /tmp/amxcons.new.h
+@@ -1,6 +1,14 @@
+ #ifndef AMXCONS_H_INCLUDED
+ #define AMXCONS_H_INCLUDED
+ 
++#if !defined TCHAR
++# if defined __WIN32__ || defined _WIN32 || defined WIN32
++#  include <tchar.h>
++# else
++   typedef char TCHAR;
++# endif
++#endif
++
+ typedef struct tagFMTINFO {
+   const cell *params;
+   int numparams;

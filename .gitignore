@@ -1,0 +1,44 @@
+# Go build artifacts
+/server
+/server.exe
+*.exe
+*.test
+*.out
+*.db
+/dist/
+
+# Compiler build outputs
+/compiler/build/
+/compiler/wasm-build/
+
+# patch artifacts
+*.orig
+*.rej
+
+
+# Pawn compiler outputs
+*.amx
+*.asm
+*.lst
+
+# IDE
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage.html
+coverage.out
+
+# golangci-lint cache
+.golangci-cache/
+
+# Taskfile checksums
+.task/
+*.db-*

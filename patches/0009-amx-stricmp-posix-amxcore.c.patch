@@ -1,0 +1,14 @@
+--- /tmp/repos/compiler/source/amx/amxcore.c
++++ compiler/amxcore.c
+@@ -38,6 +38,11 @@
+ #else
+   #include "amx.h"
+ #endif
++#if !defined stricmp && !defined __WIN32__ && !defined _WIN32 && !defined WIN32 && !defined _Windows
++  /* POSIX fallback */
++  #include <strings.h>
++  #define stricmp(a,b) strcasecmp(a,b)
++#endif
+ #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
+   #include <windows.h>
+ #endif

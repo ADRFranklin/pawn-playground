@@ -1,0 +1,68 @@
+--- /tmp/repos/compiler/source/compiler/CMakeLists.txt
++++ /tmp/CMakeLists.new2.txt
+@@ -139,6 +139,65 @@
+ add_executable(pawncc ${PAWNCC_SRCS})
+ target_link_libraries(pawncc pawnc)
+ 
++# ---------------------------------------------------------------------------
++# WebAssembly target (Emscripten only)
++# Build with: emcmake cmake .. -DBUILD_TESTING=OFF && emmake make -j pawncc_wasm
++# Output: pawncc.js + pawncc.wasm  (copy to web/wasm/)
++# ---------------------------------------------------------------------------
++if(EMSCRIPTEN)
++  # Compile all pawnc sources with NO_MAIN so sc1.c's main() is excluded,
++  # then add our WASM entry point.
++  set(PAWNWASM_SRCS ${PAWNC_SRCS} wasm_entry.c)
++  set_source_files_properties(wasm_entry.c PROPERTIES COMPILE_FLAGS -DNO_MAIN)
++
++  add_executable(pawncc_wasm ${PAWNWASM_SRCS})
++
++  # Preload the include directory into MEMFS at /include.
++  set(WASM_PRELOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include@/include")
++
++  target_link_options(pawncc_wasm PRIVATE
++    "-sEXPORTED_FUNCTIONS=[\"_wasm_compile\",\"_malloc\",\"_free\"]"
++    "-sEXPORTED_RUNTIME_METHODS=[\"ccall\",\"cwrap\",\"FS\",\"lengthBytesUTF8\"]"
++    "--preload-file=${WASM_PRELOAD_DIR}"
++    "-sMODULARIZE=1"
++    "-sEXPORT_NAME=PawnCompiler"
++    "-sALLOW_MEMORY_GROWTH=1"
++    "-sINITIAL_MEMORY=33554432"
++    "-sENVIRONMENT=worker"
++    "-O1"
++  )
++
++  set_target_properties(pawncc_wasm PROPERTIES OUTPUT_NAME "pawncc")
++
++  set(PAWNRUN_SRCS
++    ../amx/amx_entry.c
++    ../amx/amx.c
++    ../amx/amxaux.c
++    ../amx/amxcons.c
++    ../amx/amxstring.c
++    ../amx/amxcore.c
++    ../amx/amxfloat.c
++    ../amx/amxdbg.c
++  )
++
++  add_executable(pawnrun_wasm ${PAWNRUN_SRCS})
++  target_compile_definitions(pawnrun_wasm PRIVATE AMX_NO_COMPUTED_GOTO)
++
++  target_link_options(pawnrun_wasm PRIVATE
++    "-sEXPORTED_FUNCTIONS=[\"_wasm_execute\",\"_malloc\",\"_free\"]"
++    "-sEXPORTED_RUNTIME_METHODS=[\"ccall\",\"cwrap\",\"FS\",\"HEAPU8\"]"
++    "-sMODULARIZE=1"
++    "-sEXPORT_NAME=PawnRunner"
++    "-sALLOW_MEMORY_GROWTH=1"
++    "-sINITIAL_MEMORY=33554432"
++    "-sENVIRONMENT=worker"
++    "-O2"
++  )
++
++  set_target_properties(pawnrun_wasm PROPERTIES OUTPUT_NAME "pawnrun")
++endif()
++
++
+ # The Pawn disassembler
+ set(PAWNDISASM_SRCS
+   pawndisasm.c

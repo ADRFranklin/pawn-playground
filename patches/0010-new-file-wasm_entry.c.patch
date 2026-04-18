@@ -1,0 +1,94 @@
+--- /dev/null
++++ /tmp/wasm_entry.c
+@@ -0,0 +1,91 @@
++/*
++ * wasm_entry.c — Emscripten entry point for the Pawn compiler.
++ *
++ * Exposes a single C function `wasm_compile` that the JS Web Worker calls via
++ * ccall/cwrap.  All I/O is handled through Emscripten's virtual MEMFS:
++ *   - Source is written to /input.p
++ *   - Output AMX (ignored) and .lst/.asm files are read back from MEMFS
++ *   - Include files are preloaded into /include at link time
++ *
++ * Build with CMakeLists.txt (EMSCRIPTEN target) via `task compiler:wasm`.
++ */
++
++#include <emscripten.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include "sc.h"
++
++/* Maximum number of compiler argv entries. */
++#define WASM_MAX_ARGS 24
++
++/*
++ * wasm_compile(source, source_len, mode)
++ *
++ *   mode 0 — default (LST output)
++ *   mode 1 — LST only   (-l flag)
++ *   mode 2 — ASM only   (-a flag)
++ *   mode 3 — Macro substitution output (-l -m flags)
++ *
++ * Returns the pawncc exit code (0 = success, non-zero = errors).
++ *
++ * Output files written by the compiler into MEMFS:
++ *   /output.lst  — listing file (modes 0, 1, 3)
++ *   /output.asm  — assembly output (mode 2)
++ *
++ * Caller reads those files back via FS.readFile('/output.lst', ...).
++ */
++EMSCRIPTEN_KEEPALIVE
++int wasm_compile(const char *source, int source_len, int mode)
++{
++  /* Write source into virtual FS.
++   * Use strlen() instead of source_len: ccall encodes the JS string as UTF-8,
++   * so the byte count may differ from the JS .length (e.g. non-ASCII chars
++   * like em-dash are 1 JS char but 3 UTF-8 bytes).  strlen() is always right. */
++  FILE *fin = fopen("/input.p", "w");
++  if (!fin) return 1;
++  fwrite(source, 1, strlen(source), fin);
++  fclose(fin);
++
++  /* Remove stale output files so the caller can detect missing output. */
++  remove("/output.amx");
++  remove("/output.lst");
++  remove("/output.asm");
++
++  /* Build argv. */
++  char *argv[WASM_MAX_ARGS];
++  int argc = 0;
++
++  argv[argc++] = "pawncc";
++  argv[argc++] = "/input.p";
++  argv[argc++] = "-o/output.amx";
++  argv[argc++] = "-i/include";
++  argv[argc++] = "-;+";   /* require semicolons */
++  argv[argc++] = "-(+";   /* require parentheses in function calls */
++  argv[argc++] = "-\\+";  /* require backslash escape sequences */
++  argv[argc++] = "-Z+";   /* compatibility mode */
++  argv[argc++] = "-d3";   /* debug level 3: bounds+symbolic info, disables peephole
++                           * optimizer (pc_optimize=sOPTIMIZE_NONE).  The peephole
++                           * optimizer generates invalid opcodes for some loop patterns
++                           * (-d1/-d2 leave the optimizer enabled → AMX_ERR_INVINSTR). */
++  argv[argc++] = "-t4";   /* tab size 4 */
++
++  switch (mode) {
++    case 1: /* LST only */
++      argv[argc++] = "-l";
++      break;
++    case 2: /* ASM */
++      argv[argc++] = "-a";
++      break;
++    case 3: /* macros — LST + macro substitution output */
++      argv[argc++] = "-l";
++      argv[argc++] = "-m";
++      break;
++    default: /* mode 0: compile only — produces AMX, no listing */
++      break;
++  }
++
++  argv[argc] = NULL;
++
++  return pc_compile(argc, argv);
++}

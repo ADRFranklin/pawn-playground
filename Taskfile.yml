@@ -1,0 +1,70 @@
+# https://taskfile.dev
+version: '3'
+
+vars:
+  BINARY: server
+  COMPILER_SRC: '{{.COMPILER_SRC | default "/tmp/omp-compiler"}}'
+
+tasks:
+  default:
+    desc: Build the server binary
+    deps: [build]
+    silent: true
+
+  build:
+    desc: Compile the Go server binary
+    cmds:
+      - go build -o {{.BINARY}} ./cmd/server/
+    sources:
+      - '**/*.go'
+      - 'web/**/*.html'
+      - 'web/**/*.css'
+      - 'web/**/*.js'
+      - 'web/wasm/*.wasm'
+      - 'web/wasm/*.data'
+    generates:
+      - '{{.BINARY}}'
+    env:
+      CGO_ENABLED: '0'
+
+  run:
+    desc: Build and run the server (web/wasm/ must exist — run task compiler:wasm to build)
+    deps: [build]
+    cmds:
+      - ./{{.BINARY}}
+
+  test:
+    desc: Run all tests with race detector
+    cmds:
+      - go test -v -race -timeout 10s ./...
+    env:
+      CGO_ENABLED: '1'
+
+  coverage:
+    desc: Run tests and generate HTML coverage report
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+    env:
+      CGO_ENABLED: '1'
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  fmt:
+    desc: Format Go source files with gofumpt
+    cmds:
+      - gofumpt -w .
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  tidy:
+    desc: Tidy and verify Go module dependencies
+    cmds:
+      - go mod tidy
+      - go mod verify

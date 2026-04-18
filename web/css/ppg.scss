@@ -1,0 +1,410 @@
+@import '../components/bourbon/app/assets/stylesheets/bourbon';
+
+
+$splashDuration: .6s;
+$splashDelay: .1s;
+$splashTimingFunction: cubic-bezier(.48, .14, .07, .99);
+$toolbarHeight: 50px;
+$sidebarWidth: 250px;
+
+
+body,
+html {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+
+}
+
+button,
+input,
+select,
+textarea,
+a {
+  outline: none !important;
+  -webkit-tap-highlight-color: rgba(black, 0);
+}
+
+.btn .fa {
+  margin-right: .5em;
+}
+
+.app {
+  $borderColor: #777;
+
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+
+  .visible & {
+    opacity: 1;
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: $sidebarWidth;
+    overflow-y: auto;
+    border-right: 1px solid $borderColor;
+    padding: 10px;
+    @include box-sizing(border-box);
+    @include linear-gradient(left, #fff, #eee);
+
+    .document-list {
+      .list-group-item {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .active {
+        color: #fff;
+        background: #428bca;
+      }
+
+      .new-doc {
+        font-weight: bold;
+        font-style: italic;
+      }
+    }
+  }
+
+  .main {
+    position: absolute;
+    top: 0;
+    left: $sidebarWidth;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+
+    .toolbar {
+      height: $toolbarHeight;
+      line-height: $toolbarHeight - 3;
+      min-height: $toolbarHeight;
+      border-bottom: 1px solid $borderColor;
+      padding-left: 8px;
+      width: 100%;
+      @include linear-gradient(#fff, #e5e5e5);
+			
+			.btn-group.pull-right,
+			.btn.pull-right {
+				display: inline-block;
+				float: right;
+				margin: 7px 7px 0 0;
+			}
+    }
+
+    #run-code {
+      .fa {
+        width: 13px;
+      }
+
+      .fa-repeat,
+      &.running .fa-play {
+        display: none;
+      }
+
+      &.running .fa-repeat {
+        display: inline-block;
+      }
+    }
+
+    .editor {
+      background: #fff;
+      width: 100%;
+      position: absolute;
+      top: $toolbarHeight;
+      bottom: 0;
+      overflow: hidden;
+
+      .CodeMirror {
+        height: 100%;
+      }
+    }
+
+    .output {
+      background: #ddd;
+      height: 300px;
+      width: 100%;
+      position: absolute;
+      bottom: 0;
+      min-height: 100px !important;
+
+      $separatorHeight: 24px;
+
+      .separator {
+        height: $separatorHeight;
+        border: 1px solid $borderColor;
+        border-style: solid none;
+        cursor: resize;
+        cursor: ns-resize;
+        @include linear-gradient(#fefefe 0%, #f1f1f1 50%, #e1e1e1 50%, #e0e0e0 100%);
+      }
+
+      .scroller {
+        overflow: auto;
+        position: absolute;
+        top: $separatorHeight;
+        bottom: 30px;
+        left: 0;
+        right: 0;
+
+        pre {
+          margin: 6px;
+          padding: 0;
+          border: none;
+          box-shadow: none;
+          background: transparent;
+          text-shadow: 0 1px #fff;
+          border-radius: 0;
+
+          &.compiler-output {
+            border-bottom: 1px solid #777;
+            padding-bottom: 8px;
+            box-shadow: 0 1px #fff;
+          }
+
+          &.compiler-output-lst {
+            padding-top: 40px;
+            padding-bottom: 20px;
+            white-space: pre;
+            overflow-x: scroll;
+            line-height: 18px;
+          }
+        }
+      }
+
+      .macro-stepper {
+        display: none;
+        position: absolute;
+        z-index: 100;
+        left: 0;
+        right: 0;
+        top: $separatorHeight;
+        height: 41px;
+        line-height: 40px;
+        @include linear-gradient(#eaeaea, #fff);
+        border-bottom: 1px solid $borderColor;
+
+        button {
+          text-align: center;
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          margin: 5px 0;
+          display: block;
+          float: left;
+
+          &:first-child {
+            margin-left: 5px;
+          }
+
+          .fa {
+            margin: 0;
+          }
+        }
+
+        .current-step {
+          display: block;
+          float: left;
+          width: 60px;
+          height: 41px;
+          text-align: center;
+          font-weight: bold;
+          text-shadow: 0 -1px white;
+        }
+      }
+
+      .prompt {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 29px;
+        font: 10pt monospace;
+        line-height: 29px;
+        border-top: 1px solid $borderColor;
+        text-indent: 6px;
+        background: #eee;
+
+        span {
+          display: block;
+          height: 29px;
+          width: 14px;
+          background: #eee;
+          position: absolute;
+          top: 0;
+          left: 0;
+          z-index: 2;
+        }
+
+        input:focus + span {
+          background: #fff;
+        }
+
+        input {
+          position: absolute;
+          background: transparent;
+          left: 0;
+          top: 0px;
+          width: 100%;
+          display: block;
+          padding: 0;
+          padding-left: 18px;
+          margin: 0;
+          height: 29px;
+          border: none;
+          outline: none;
+          box-shadow: none;
+          font: 10pt monospace;
+          -webkit-appearance: none;
+          appearance: none;
+          @include box-sizing(border-box);
+
+          &:focus {
+            background: #fff;
+          }
+        }
+      }
+    }
+  }
+}
+
+.cm-s-default.cm-s-pawn {
+  .cm-comment {
+    color: #272;
+  }
+
+  .cm-meta {
+    color: #900;
+  }
+
+  .cm-keyword {
+    color: #00c;
+    font-weight: bold;
+  }
+
+  .cm-number {
+    color: #c00;
+  }
+
+  .cm-string {
+    color: #555;
+  }
+
+  .CodeMirror-matchingbracket {
+    color: #f00;
+    font-weight: bold;
+  }
+
+  .CodeMirror-foldgutter-open,
+  .CodeMirror-foldgutter-folded {
+    color: #777;
+
+    &:hover {
+      color: #000;
+    }
+  }
+
+  .CodeMirror-foldmarker {
+    text-shadow: none;
+  }
+
+  .cm-matchhighlight {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVQI12NgYGBgkKzc8x9CMDAwAAAmhwSbidEoSQAAAABJRU5ErkJggg==);
+    background-position: bottom;
+    background-repeat: repeat-x;
+  }
+
+  .line {
+    display: block;
+  }
+
+  .repl-line {
+    vertical-align: bottom;
+    display: block;
+
+    &.ahead,
+    &.behind {
+      display: none;
+    }
+
+    &.ahead.first {
+      display: inline;
+
+      .new {
+        display: none;
+      }
+    }
+
+    &.behind.last {
+      display: inline;
+
+      .old {
+        display: none;
+      }
+    }
+
+    &.active {
+      &.dir-left .repl {
+        @include transform(translateY(-18px));
+        @include animation(repl-silde-up .7s ease);
+      }
+
+      &.dir-right .repl {
+        @include transform(translateY(0));
+        @include animation(repl-silde-down .7s ease);
+
+        .new {
+          @include transform(translateY(-18px));
+        }
+
+        .old {
+          @include transform(translateY(18px));
+        }
+      }
+
+      .repl {
+        display: inline-block;
+        height: 18px;
+        vertical-align: bottom;
+        position: relative;
+        z-index: 1;
+        border-radius: 3px;
+
+        .old {
+          background: #faa;
+          display: block;
+          border-radius: 3px 3px 0 0;
+          box-shadow: 0 0 1px rgba(white, .8);
+        }
+
+        .new {
+          background: #aaffaa;
+          display: block;
+          border-radius: 0 0 3px 3px;
+          box-shadow: 0 0 1px rgba(white, .8);
+        }
+      }
+    }
+  }
+}
+
+@include keyframes(repl-silde-up) {
+  0%, 30% {
+    @include transform(translateY(0));
+  }
+}
+
+@include keyframes(repl-silde-down) {
+  0%, 30% {
+    @include transform(translateY(-18px));
+  }
+}

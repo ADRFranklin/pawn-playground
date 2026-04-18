@@ -1,0 +1,38 @@
+--- /tmp/repos/compiler/source/amx/amx.c
++++ compiler/amx.c
+@@ -506,7 +506,7 @@
+   long codesize;
+   OPCODE op;
+   int sysreq_flg;
+-  #if (defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT) && !(defined __64BIT__ && PAWN_CELL_SIZE < 64)
++  #if (defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT) && !(defined __64BIT__ && PAWN_CELL_SIZE < 64) && !defined AMX_NO_COMPUTED_GOTO
+     cell *opcode_list;
+   #endif
+   #if defined JIT
+@@ -534,7 +534,7 @@
+   assert_static(OP_LOAD_BOTH==154);
+ 
+   sysreq_flg=0;
+-  #if (defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT) && !(defined __64BIT__ && PAWN_CELL_SIZE < 64)
++  #if (defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT) && !(defined __64BIT__ && PAWN_CELL_SIZE < 64) && !defined AMX_NO_COMPUTED_GOTO
+     amx_Exec(amx, (cell*)(void*)&opcode_list, 0);
+   #endif
+ 
+@@ -545,7 +545,7 @@
+       amx->flags &= ~AMX_FLAG_BROWSE;
+       return AMX_ERR_INVINSTR;
+     } /* if */
+-    #if (defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT) && !(defined __64BIT__ && PAWN_CELL_SIZE < 64)
++    #if (defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT) && !(defined __64BIT__ && PAWN_CELL_SIZE < 64) && !defined AMX_NO_COMPUTED_GOTO
+       /* relocate opcode (only works if the size of an opcode is at least
+        * as big as the size of a pointer (jump address); so basically we
+        * rely on the opcode and a pointer being 32-bit
+@@ -1837,7 +1837,7 @@
+ #define CHKSTACK()      if (stk>amx->stp) return AMX_ERR_STACKLOW
+ #define CHKHEAP()       if (hea<amx->hlw) return AMX_ERR_HEAPLOW
+ 
+-#if (defined __GNUC__ || defined __ICC) && !(defined ASM32 || defined JIT) && !defined __64BIT__
++#if (defined __GNUC__ || defined __ICC) && !(defined ASM32 || defined JIT) && !defined __64BIT__ && !defined AMX_NO_COMPUTED_GOTO
+     /* GNU C version uses the "labels as values" extension to create
+      * fast "indirect threaded" interpreter. The Intel C/C++ compiler
+      * supports this too.

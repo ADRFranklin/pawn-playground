@@ -1,0 +1,41 @@
+# Git
+.git/
+.gitignore
+
+# Build outputs
+/server
+/server.exe
+/dist/
+/compiler/build/
+/compiler/wasm-build/
+
+# Test artifacts
+coverage.html
+coverage.out
+*.test
+*.out
+*.db
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Task runner cache
+.task/
+
+# Dev container config
+.devcontainer/
+
+# Docs
+docs/
+
+# CI
+.github/
+
+# Linter cache
+.golangci-cache/

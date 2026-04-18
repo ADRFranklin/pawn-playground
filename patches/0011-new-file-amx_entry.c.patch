@@ -1,0 +1,106 @@
+--- /dev/null
++++ /tmp/amx_entry.c
+@@ -0,0 +1,103 @@
++/*
++ * amx_entry.c — Emscripten entry point for the Pawn AMX runner.
++ *
++ * Exposes a single C function `wasm_execute` that the JS Web Worker calls via
++ * ccall. The function initialises the AMX, registers safe native modules,
++ * and runs the script's main() entry point.
++ *
++ * All print/printf output flows through Emscripten's stdout, which the worker
++ * captures via the `print` module option — no additional output buffer needed.
++ *
++ * Build with CMakeLists.txt (EMSCRIPTEN target) via `task compiler:wasm`.
++ */
++
++#include <emscripten.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include "amx.h"
++#include "amxaux.h"
++#include "amxcons.h"
++
++/* Native module init functions (defined in amxcons.c / amxstring.c etc.) */
++extern int AMXEXPORT AMXAPI amx_ConsoleInit(AMX *amx);
++extern int AMXEXPORT AMXAPI amx_ConsoleCleanup(AMX *amx);
++extern int AMXEXPORT AMXAPI amx_StringInit(AMX *amx);
++extern int AMXEXPORT AMXAPI amx_StringCleanup(AMX *amx);
++extern int AMXEXPORT AMXAPI amx_CoreInit(AMX *amx);
++extern int AMXEXPORT AMXAPI amx_CoreCleanup(AMX *amx);
++extern int AMXEXPORT AMXAPI amx_FloatInit(AMX *amx);
++extern int AMXEXPORT AMXAPI amx_FloatCleanup(AMX *amx);
++
++/* Maximum execution steps before we consider the script hung. */
++#define MAX_EXEC_STEPS 10000000
++
++/*
++ * wasm_execute(data, len)
++ *
++ *   data — pointer to raw .amx file bytes (written into WASM memory by JS)
++ *   len  — byte count
++ *
++ * Returns an AMX error code (0 = clean exit, see amx.h AMX_ERR_*).
++ * All print() / printf() output goes to Emscripten stdout and is captured
++ * by the worker's `print` hook.
++ */
++EMSCRIPTEN_KEEPALIVE
++int wasm_execute(const void *data, int len)
++{
++  if (!data || len <= 0) {
++    fprintf(stderr, "wasm_execute: invalid arguments\n");
++    return AMX_ERR_PARAMS;
++  }
++
++  /* amx_Init() treats the program buffer as writable, so we need our own copy. */
++  void *prog = malloc((size_t)len);
++  if (!prog) {
++    fprintf(stderr, "wasm_execute: out of memory\n");
++    return AMX_ERR_MEMORY;
++  }
++  memcpy(prog, data, (size_t)len);
++
++  AMX amx;
++  memset(&amx, 0, sizeof(AMX));
++
++  int err = amx_Init(&amx, prog);
++  if (err != AMX_ERR_NONE) {
++    fprintf(stderr, "AMX init error %d\n", err);
++    free(prog);
++    return err;
++  }
++
++  /* Register permitted native modules. */
++  amx_ConsoleInit(&amx);   /* print, printf, getvalue, … */
++  amx_StringInit(&amx);    /* strcat, strlen, strcmp, …  */
++  amx_CoreInit(&amx);      /* numargs, clamp, min, max, … */
++  amx_FloatInit(&amx);     /* float arithmetic             */
++
++  /* Run main() / the script entry point. */
++  cell retval = 0;
++  err = amx_Exec(&amx, &retval, AMX_EXEC_MAIN);
++
++  /* AMX_ERR_EXIT means the script called exit() — treat as clean. */
++  if (err == AMX_ERR_EXIT) {
++    err = AMX_ERR_NONE;
++  }
++
++  if (err != AMX_ERR_NONE) {
++    fprintf(stderr, "Runtime error %d\n", err);
++  }
++
++  /* Flush stdout (line-buffered in Emscripten) so any output not terminated
++   * with '\n' — e.g. printf("yolo") — is delivered to the JS print callback
++   * before we return. */
++  fflush(stdout);
++  fflush(stderr);
++
++  amx_FloatCleanup(&amx);
++  amx_CoreCleanup(&amx);
++  amx_StringCleanup(&amx);
++  amx_ConsoleCleanup(&amx);
++  amx_Cleanup(&amx);
++  free(prog);
++  return err;
++}
