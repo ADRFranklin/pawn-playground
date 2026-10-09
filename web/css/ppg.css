@@ -8,7 +8,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.2.8/files/jetbrains-mono-latin-400-normal.woff2") format("woff2");
+  src: url("/vendor/fonts/jetbrains-mono.woff2") format("woff2");
 }
 
 /* ---- Reset / base -------------------------------------------------------- */
@@ -1303,4 +1303,13 @@ a:focus-visible,
     animation: none !important;
     transition: none !important;
   }
+}
+/* PWA controls appear only when the browser offers installation. */
+#install-app[hidden] {
+  display: none;
+}
+
+.pwa-update-notice {
+  max-width: min(90vw, 32rem);
+  white-space: normal;
 }

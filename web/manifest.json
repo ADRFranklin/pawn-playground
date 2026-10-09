@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Pawn Playground",
+  "short_name": "Pawn Playground",
+  "description": "Write, compile, and run Pawn code in your browser, online or offline.",
+  "lang": "en-US",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14171C",
+  "theme_color": "#14171C",
+  "icons": [
+    {"src": "/icons/pawn-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/icons/pawn-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/icons/pawn-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

@@ -12,7 +12,7 @@ tasks:
     silent: true
 
   editor:
-    desc: Build web editor
+    desc: Build web assets
     cmds:
       - npm ci
       - npm run build
@@ -24,9 +24,35 @@ tasks:
       - web/js/ppg-editor-theme.js
       - web/js/ppg-language.js
       - web/js/pawn*-language.js
+      - web/js/ppg-gui.js
+      - web/js/ppg-run.js
+      - web/js/ppg-share.js
+      - web/js/ppg-pwa.js
+      - web/js/pawn-*-worker.js
+      - scripts/*.mjs
+      - scripts/service-worker.js
+      - web/index.html
+      - web/favicon.svg
+      - web/manifest.json
+      - web/css/*.css
+      - web/wasm/*.wasm
+      - web/wasm/*.js
+      - web/wasm/*.data
     generates:
       - node_modules/.package-lock.json
       - web/js/ppg-editor.bundle.js
+      - web/sw.js
+      - web/vendor/jquery.min.js
+      - web/vendor/bootstrap.min.css
+      - web/vendor/bootstrap.bundle.min.js
+      - web/vendor/bootstrap-icons.css
+      - web/vendor/fonts/bootstrap-icons.woff
+      - web/vendor/fonts/bootstrap-icons.woff2
+      - web/vendor/fonts/jetbrains-mono.woff2
+      - web/icons/pawn-192.png
+      - web/icons/pawn-512.png
+      - web/icons/pawn-180.png
+      - web/icons/pawn-maskable-512.png
 
   build:
     desc: Compile the Go server binary

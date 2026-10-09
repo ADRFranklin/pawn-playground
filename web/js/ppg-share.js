@@ -17,7 +17,7 @@
         }
       })
       .catch(function (err) {
-        console.warn('Could not load shared snippet:', err);
+        showToast(!navigator.onLine || err instanceof TypeError ? 'Shared links need an internet connection.' : 'Could not load this shared link.', true);
       });
   }
 
@@ -25,6 +25,14 @@
 
   var $shareBtn = $('#share-btn');
   var $toast = null;
+  var sharePending = false;
+  function updateShareAvailability() {
+    $shareBtn.prop('disabled', sharePending || !navigator.onLine)
+      .attr('title', navigator.onLine ? 'Share code via link' : 'Sharing needs an internet connection');
+  }
+  window.addEventListener('online', updateShareAvailability);
+  window.addEventListener('offline', updateShareAvailability);
+  updateShareAvailability();
 
   function showToast(msg, isError) {
     if ($toast) { $toast.remove(); }
@@ -38,13 +46,15 @@
   }
 
   $shareBtn.on('click', function () {
+    if (!navigator.onLine) { showToast('Sharing needs an internet connection.', true); return; }
     var code = window.PPG && PPG.getCurrentCode ? PPG.getCurrentCode() : '';
     if (!code.trim()) {
       showToast('Nothing to share — editor is empty.', true);
       return;
     }
 
-    $shareBtn.attr('disabled', true);
+    sharePending = true;
+    updateShareAvailability();
 
     fetch('/api/share', {
       method: 'POST',
@@ -70,10 +80,11 @@
         history.replaceState(null, '', data.url);
       })
       .catch(function (err) {
-        showToast('Share failed: ' + err.message, true);
+        showToast(!navigator.onLine || err instanceof TypeError ? 'Sharing needs an internet connection.' : 'Share failed: ' + err.message, true);
       })
       .finally(function () {
-        $shareBtn.removeAttr('disabled');
+        sharePending = false;
+        updateShareAvailability();
       });
   });
 })();

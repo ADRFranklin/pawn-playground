@@ -63,11 +63,17 @@ editor:
     WORKDIR /build
     COPY package.json package-lock.json ./
     RUN npm ci
-    COPY web/js/ web/js/
-    COPY web/editor-tests/ web/editor-tests/
+    COPY scripts/ scripts/
+    COPY web/ web/
     RUN npm test
     RUN npm run build
-    SAVE ARTIFACT web/js/ppg-editor.bundle.js /ppg-editor.bundle.js
+    SAVE ARTIFACT web /web
+
+web-assets:
+    FROM +editor
+    COPY +compiler-wasm/wasm web/wasm
+    RUN node scripts/build-pwa.mjs
+    SAVE ARTIFACT web /web
 
 test:
     FROM golang:1.26-alpine
@@ -78,7 +84,7 @@ test:
     RUN go mod download
 
     COPY . .
-    COPY +editor/ppg-editor.bundle.js web/js/ppg-editor.bundle.js
+    COPY +editor/web web
     RUN go vet ./...
     RUN CGO_ENABLED=1 go test -race -timeout 30s ./...
 
@@ -91,8 +97,7 @@ server:
     RUN go mod download
 
     COPY . .
-    COPY +editor/ppg-editor.bundle.js web/js/ppg-editor.bundle.js
-    COPY +compiler-wasm/wasm web/wasm
+    COPY +web-assets/web web
 
     RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /server ./cmd/server/
 

@@ -47,3 +47,8 @@ node_modules/
 web/js/ppg-editor.bundle.js
 playwright-report/
 test-results/
+
+# Generated PWA resources
+web/sw.js
+web/vendor/
+web/icons/
