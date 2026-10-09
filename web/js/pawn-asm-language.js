@@ -1,14 +1,4 @@
-(function(mod) {
-  if (typeof exports == "object" && typeof module == "object") // CommonJS
-    mod(require("../../lib/codemirror"));
-  else if (typeof define == "function" && define.amd) // AMD
-    define(["../../lib/codemirror"], mod);
-  else // Plain browser env
-    mod(CodeMirror);
-})(function(CodeMirror) {
-"use strict";
-
-CodeMirror.defineMode("pawn-asm", function(config, parserConfig) {
+export function createPawnAsmParser(config, parserConfig) {
   var indentUnit = config.indentUnit,
       statementIndentUnit = parserConfig.statementIndentUnit || indentUnit,
       dontAlignCalls = parserConfig.dontAlignCalls,
@@ -155,7 +145,7 @@ CodeMirror.defineMode("pawn-asm", function(config, parserConfig) {
     },
 
     indent: function(state, textAfter) {
-      if (state.tokenize != tokenBase && state.tokenize != null) return CodeMirror.Pass;
+      if (state.tokenize != tokenBase && state.tokenize != null) return null;
       var ctx = state.context, firstChar = textAfter && textAfter.charAt(0);
       if (ctx.type == "statement" && firstChar == "}") ctx = ctx.prev;
       var closing = firstChar == ctx.type;
@@ -163,117 +153,45 @@ CodeMirror.defineMode("pawn-asm", function(config, parserConfig) {
       else if (ctx.align && (!dontAlignCalls || ctx.type != ")")) return ctx.column + (closing ? 0 : 1);
       else if (ctx.type == ")" && !closing) return ctx.indented + statementIndentUnit;
       else return ctx.indented + (closing ? 0 : indentUnit);
-    },
-
-    lineComment: ";"
+    }
   };
-});
+}
 
-(function() {
-  function words(str) {
-    var obj = {}, words = str.split(" ");
-    for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
-    return obj;
-  }
+function words(str) {
+  var obj = {}, words = str.split(" ");
+  for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
+  return obj;
+}
 
-  function commentHook(stream, state) {
-    stream.skipToEnd();
-    state.tokenize = null;
-    return "comment";
-  }
+function commentHook(stream, state) {
+  stream.skipToEnd();
+  state.tokenize = null;
+  return "comment";
+}
 
-  function cpp11StringHook(stream, state) {
-    stream.backUp(1);
-    // Raw strings.
-    if (stream.match(/(R|u8R|uR|UR|LR)/)) {
-      var match = stream.match(/"(.{0,16})\(/);
-      if (!match) {
-        return false;
-      }
-      state.cpp11RawStringDelim = match[1];
-      state.tokenize = tokenRawString;
-      return tokenRawString(stream, state);
-    }
-    // Unicode strings/chars.
-    if (stream.match(/(u8|u|U|L)/)) {
-      if (stream.match(/["']/, /* eat */ false)) {
-        return "string";
-      }
-      return false;
-    }
-    // Ignore this hook.
-    stream.next();
-    return false;
-  }
-
-  // C#-style strings where "" escapes a quote.
-  function tokenAtString(stream, state) {
-    var next;
-    while ((next = stream.next()) != null) {
-      if (next == '"' && !stream.eat('"')) {
-        state.tokenize = null;
-        break;
-      }
-    }
-    return "string";
-  }
-
-  // C++11 raw string literal is <prefix>"<delim>( anything )<delim>", where
-  // <delim> can be a string up to 16 characters long.
-  function tokenRawString(stream, state) {
-    var closingSequence = new RegExp(".*?\\)" + state.cpp11RawStringDelim + '"');
-    var match = stream.match(closingSequence);
-    if (match) {
-      state.tokenize = null;
-    } else {
-      stream.skipToEnd();
-    }
-    return "string";
-  }
-
-  function def(mimes, mode) {
-    var words = [];
-    function add(obj) {
-      if (obj) for (var prop in obj) if (obj.hasOwnProperty(prop))
-        words.push(prop);
-    }
-    add(mode.keywords);
-    add(mode.builtin);
-    add(mode.atoms);
-    if (words.length) {
-      mode.helperType = mimes[0];
-      CodeMirror.registerHelper("hintWords", mimes[0], words);
-    }
-
-    for (var i = 0; i < mimes.length; ++i)
-      CodeMirror.defineMIME(mimes[i], mode);
-  }
-
-  def(["text/x-pawn-asm"], {
-    name: "pawn-asm",
-    atoms: words('load.pri load.alt load.s.pri load.s.alt lref.pri ' +
-                 'lref.alt lref.s.pri lref.s.alt load.i lodb.i const.pri ' +
-                 'const.alt addr.pri addr.alt stor.pri stor.alt ' +
-                 'stor.s.pri stor.s.alt sref.pri sref.alt sref.s.pri ' +
-                 'sref.s.alt stor.i strb.i lidx lidx.b idxaddr idxaddr.b ' +
-                 'align.pri align.alt lctrl sctrl move.pri move.alt xchg ' +
-                 'push.pri push.alt pick push.c push push.s pop.pri ' +
-                 'pop.alt stack heap proc ret retn call call.pri jump ' +
-                 'jrel jzer jnz jeq jneq jless jleq jgrtr jgeq jsless ' +
-                 'jsleq jsgrtr jsgeq shl shr sshr shl.c.pri shl.c.alt ' +
-                 'shr.c.pri shr.c.alt smul sdiv sdiv.alt umul udiv ' +
-                 'udiv.alt add sub sub.alt and or xor not neg invert ' +
-                 'add.c smul.c zero.pri zero.alt zero zero.s sign.pri ' +
-                 'sign.alt eq neq less leq grtr geq sless sleq sgrtr ' +
-                 'sgeq eq.c.pri eq.c.alt inc.pri inc.alt inc inc.s inc.i ' +
-                 'dec.pri dec.alt dec dec.s dec.i movs cmps fill halt ' +
-                 'bounds sysreq.pri sysreq.c jump.pri switch casetbl ' +
-                 'swap.pri swap.alt push.adr nop sysreq.n symtag break ' +
-                 'push2.c push2 push2.s push2.adr push3.c push3 push3.s ' +
-                 'push3.adr push4.c push4 push4.s'),
-    blockKeywords: words(""),
-    keywords: words('CODE DATA dump STKSIZE'),
-    hooks: {';': commentHook}
-  });
-}());
-});
+export const pawnAsmConfig = {
+  name: "pawn-asm",
+  atoms: words('load.pri load.alt load.s.pri load.s.alt lref.pri ' +
+               'lref.alt lref.s.pri lref.s.alt load.i lodb.i const.pri ' +
+               'const.alt addr.pri addr.alt stor.pri stor.alt ' +
+               'stor.s.pri stor.s.alt sref.pri sref.alt sref.s.pri ' +
+               'sref.s.alt stor.i strb.i lidx lidx.b idxaddr idxaddr.b ' +
+               'align.pri align.alt lctrl sctrl move.pri move.alt xchg ' +
+               'push.pri push.alt pick push.c push push.s pop.pri ' +
+               'pop.alt stack heap proc ret retn call call.pri jump ' +
+               'jrel jzer jnz jeq jneq jless jleq jgrtr jgeq jsless ' +
+               'jsleq jsgrtr jsgeq shl shr sshr shl.c.pri shl.c.alt ' +
+               'shr.c.pri shr.c.alt smul sdiv sdiv.alt umul udiv ' +
+               'udiv.alt add sub sub.alt and or xor not neg invert ' +
+               'add.c smul.c zero.pri zero.alt zero zero.s sign.pri ' +
+               'sign.alt eq neq less leq grtr geq sless sleq sgrtr ' +
+               'sgeq eq.c.pri eq.c.alt inc.pri inc.alt inc inc.s inc.i ' +
+               'dec.pri dec.alt dec dec.s dec.i movs cmps fill halt ' +
+               'bounds sysreq.pri sysreq.c jump.pri switch casetbl ' +
+               'swap.pri swap.alt push.adr nop sysreq.n symtag break ' +
+               'push2.c push2 push2.s push2.adr push3.c push3 push3.s ' +
+               'push3.adr push4.c push4 push4.s'),
+  blockKeywords: words(""),
+  keywords: words('CODE DATA dump STKSIZE'),
+  hooks: {';': commentHook}
+};

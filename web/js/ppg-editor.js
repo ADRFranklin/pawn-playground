@@ -1,7 +1,22 @@
+import {EditorState, Compartment, Prec} from '@codemirror/state';
+import {EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars,
+  drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightActiveLine} from '@codemirror/view';
+import {history, defaultKeymap, historyKeymap, indentWithTab, deleteLine, selectLine,
+  moveLineUp, moveLineDown, copyLineUp, copyLineDown} from '@codemirror/commands';
+import {syntaxHighlighting, indentUnit, indentOnInput, bracketMatching, foldGutter, foldKeymap} from '@codemirror/language';
+import {searchKeymap, highlightSelectionMatches, selectNextOccurrence} from '@codemirror/search';
+import {autocompletion, completeFromList, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
+import {lintGutter, setDiagnostics, lintKeymap} from '@codemirror/lint';
+import {vim} from '@replit/codemirror-vim';
+import {emacs} from '@replit/codemirror-emacs';
+import {vscodeKeymap} from '@replit/codemirror-vscode-keymap';
+import {pawnLanguage, pawnHighlightStyle, pawnFolding, pawnCompletions, highlightCode} from './ppg-language.js';
+import {pawnEditorTheme} from './ppg-editor-theme.js';
+import {storageKeys, restoreEditorState, serializeDocument, readSavedDocuments, writeSavedDocuments} from './ppg-editor-state.js';
+
 'use strict';
 
 window.PPG = (function (self) {
-  var $body = $('body');
   var $app = $('.app');
   var $editor = $app.find('.main > .editor');
   var $documentList = $app.find('.document-list');
@@ -9,52 +24,72 @@ window.PPG = (function (self) {
   var lintErrors = [];
   var keyMap = localStorage.keyMap || 'default';
   $('.keymap-current').text(keyMap);
-
-  var cm = CodeMirror($editor.get(0), {
-    autoCloseBrackets: true,
-    autofocus: true,
-    dragDrop: true,
-    foldGutter: true,
-    gutters: [
-      'CodeMirror-linenumbers',
-      'CodeMirror-lint-markers',
-      'CodeMirror-foldgutter'
-    ],
-    highlightSelectionMatches: true,
-    indentUnit: 4,
-    indentWithTabs: true,
-    lineNumbers: true,
-    lineWrapping: false,
-    matchBrackets: true,
-    showCursorWhenSelecting: true,
-    smartIndent: true,
-    tabSize: 4,
-    keyMap: keyMap,
-    theme: 'dracula pawn',
-    extraKeys: {
-      // Ctrl+Shift+Letter combinations are all claimed by browser chrome
-      // (add-ons, devtools, responsive design, etc.) and fire before JS can
-      // intercept them.  Alt+Shift+Letter is not reserved by any major browser.
-      // Ctrl+Enter is the universal "run" convention for code playgrounds.
-      'Ctrl-Enter':   function() { $('#run').trigger('click'); },
-      'Alt-Shift-C':  function() { $('#compile').trigger('click'); },
-      'Alt-Shift-L':  function() { $('#compile-lst').trigger('click'); },
-      'Alt-Shift-A':  function() { $('#compile-asm').trigger('click'); },
-      'Alt-Shift-M':  function() { $('#compile-macros').trigger('click'); }
-    },
-    lint: {
-      getAnnotations: function() {
-        return lintErrors.map(function(err) {
-          return {
-            from: CodeMirror.Pos(err.startLine - 1, 0),
-            to: CodeMirror.Pos(err.endLine - 1, 0),
-            message: err.message,
-            severity: err.type
-          };
-        });
-      }
-    }
+  $('.select-keymap .dropdown-item').each(function() {
+    $(this).toggleClass('active', $(this).data('keymap') === keyMap);
   });
+
+  const keymapConfig = new Compartment();
+  let view;
+
+  const shortcuts = [
+    ['Ctrl-Enter', '#run'], ['Alt-Shift-c', '#compile'],
+    ['Alt-Shift-l', '#compile-lst'], ['Alt-Shift-a', '#compile-asm'], ['Alt-Shift-m', '#compile-macros']
+  ].map(([key, selector]) => ({key, run: () => { $(selector).trigger('click'); return true; }}));
+
+  const sublimeKeymap = [
+    {key: 'Mod-d', run: selectNextOccurrence},
+    {key: 'Mod-Shift-k', run: deleteLine},
+    {key: 'Mod-l', run: selectLine},
+    {key: 'Alt-Up', run: moveLineUp}, {key: 'Alt-Down', run: moveLineDown},
+    {key: 'Alt-Shift-Up', run: copyLineUp}, {key: 'Alt-Shift-Down', run: copyLineDown}
+  ];
+
+  function selectedKeymap() {
+    const bindings = keyMap === 'vscode' ? keymap.of(vscodeKeymap)
+      : keyMap === 'sublime' ? keymap.of(sublimeKeymap)
+      : keyMap === 'vim' ? vim()
+      : keyMap === 'emacs' ? emacs() : [];
+    return [bindings, keymap.of([...closeBracketsKeymap, ...completionKeymap, indentWithTab,
+      ...defaultKeymap, ...historyKeymap, ...searchKeymap, ...foldKeymap, ...lintKeymap])];
+  }
+
+  function extensions() {
+    return [
+      pawnLanguage, pawnFolding, pawnEditorTheme, syntaxHighlighting(pawnHighlightStyle),
+      EditorView.editorAttributes.of({class: 'cm-s-pawn'}),
+      EditorView.contentAttributes.of({'aria-label': 'Pawn source code'}),
+      EditorState.tabSize.of(4), indentUnit.of('\t'), EditorState.allowMultipleSelections.of(true),
+      history(), lineNumbers(), highlightActiveLineGutter(), highlightSpecialChars(),
+      drawSelection(), dropCursor(), rectangularSelection(), crosshairCursor(),
+      highlightActiveLine(), highlightSelectionMatches(), bracketMatching(),
+      indentOnInput(), closeBrackets(), foldGutter({openText: '−', closedText: '+'}), lintGutter(),
+      autocompletion(), pawnLanguage.data.of({autocomplete: completeFromList(pawnCompletions)}),
+      Prec.highest(keymap.of(shortcuts)), keymapConfig.of(selectedKeymap()),
+      EditorView.updateListener.of(update => {
+        if (!docs?.[activeDoc]?.uid) return;
+        docs[activeDoc].state = update.state;
+        if (update.docChanged) {
+          if (lintErrors.length) {
+            lintErrors = [];
+            docs[activeDoc].errors = [];
+            queueMicrotask(() => applyDiagnostics());
+          }
+          setSaveTimeout();
+        }
+      })
+    ];
+  }
+
+  function applyDiagnostics() {
+    const doc = view.state.doc;
+    const diagnostics = lintErrors.map(error => {
+      const start = doc.line(Math.max(1, Math.min(doc.lines, error.startLine)));
+      const end = doc.line(Math.max(start.number, Math.min(doc.lines, error.endLine)));
+      return {from: start.from, to: end.to, message: error.message,
+        severity: error.type === 'warning' ? 'warning' : 'error'};
+    });
+    view.dispatch(setDiagnostics(view.state, diagnostics));
+  }
 
   var saveTimeout = null;
 
@@ -66,12 +101,7 @@ window.PPG = (function (self) {
     }, 250);
   }
 
-  cm.on('change', setSaveTimeout);
-  // Note: cursorActivity is intentionally NOT a save trigger — cursor movement
-  // alone fires hundreds of times per second and does not alter document content.
-
-  var demoDoc = new CodeMirror.Doc(
-    [
+  const demoCode = [
       '/*',
       ' * Pawn Playground — click Run, Compile, LST, ASM, or Macros.',
       ' *',
@@ -100,24 +130,30 @@ window.PPG = (function (self) {
       '\t\tprintf("items[%d] = %d\\n", i, items[i]);',
       '\t}',
       '}'
-    ].join('\n'),
-    'text/x-pawn'
-  );
+    ].join('\n');
 
   var activeDoc = 0;
   var docs;
+  var savedActive;
 
   loadDocuments();
+  view = new EditorView({parent: $editor.get(0), state: docs[1].state});
+  view.scrollDOM.addEventListener('scroll', () => {
+    if (!docs[activeDoc]?.uid) return;
+    docs[activeDoc].scrollTop = view.scrollDOM.scrollTop;
+    docs[activeDoc].scrollLeft = view.scrollDOM.scrollLeft;
+  });
   setActiveDocument(findActiveDoc() || 1);
+  if (localStorage[storageKeys.version] !== '6') saveDocuments();
 
   // Multi-tab cross-window sync via the 'storage' event — zero CPU cost when
   // the user is idle, fires immediately when another tab writes ppgSaveRevision.
-  var saveRev = +localStorage.ppgSaveRevision || 0;
+  var saveRev = +localStorage[storageKeys.revision] || 0;
 
   $(window).on('storage', function(e) {
-    if (e.originalEvent.key !== 'ppgSaveRevision') return;
-    if (+localStorage.ppgSaveRevision === saveRev) return;
-    saveRev = +localStorage.ppgSaveRevision;
+    if (e.originalEvent.key !== storageKeys.revision) return;
+    if (+localStorage[storageKeys.revision] === saveRev) return;
+    saveRev = +localStorage[storageKeys.revision];
     var activeUid = docs[activeDoc].uid;
     loadDocuments();
     var foundDoc = null;
@@ -132,13 +168,14 @@ window.PPG = (function (self) {
 
   self.clearEditorErrors = function() {
     lintErrors = [];
-    CodeMirror.startLinting(cm);
+    if (docs[activeDoc]) docs[activeDoc].errors = [];
+    applyDiagnostics();
   };
 
   self.setEditorErrors = function(errors) {
     lintErrors = errors;
     if (docs[activeDoc]) docs[activeDoc].errors = errors;
-    CodeMirror.startLinting(cm);
+    applyDiagnostics();
   };
 
   // ---- Documents -----------------------------------------------------------
@@ -234,12 +271,12 @@ window.PPG = (function (self) {
         var newIdx = docs.push({
           name: name,
           uid: +new Date(),
-          cmDoc: demoDoc.copy()
+          state: EditorState.create({doc: demoCode, extensions: extensions()})
         }) - 1;
         activeDoc = newIdx;
-        cm.swapDoc(docs[newIdx].cmDoc);
+        view.setState(docs[newIdx].state);
         lintErrors = [];
-        CodeMirror.startLinting(cm);
+        applyDiagnostics();
         syncDocumentList();
         saveDocuments();
       });
@@ -247,9 +284,12 @@ window.PPG = (function (self) {
     }
 
     activeDoc = doc;
-    cm.swapDoc(docs[doc].cmDoc);
+    view.setState(docs[doc].state);
+    view.dispatch({effects: keymapConfig.reconfigure(selectedKeymap())});
+    view.scrollDOM.scrollTop = docs[doc].scrollTop || 0;
+    view.scrollDOM.scrollLeft = docs[doc].scrollLeft || 0;
     lintErrors = docs[doc].errors || [];
-    CodeMirror.startLinting(cm);
+    applyDiagnostics();
     syncDocumentList();
   }
 
@@ -278,27 +318,15 @@ window.PPG = (function (self) {
     var plainDocs = [];
     docs.forEach(function(doc, idx) {
       if (idx === 0) return;
-      plainDocs.push({
-        name: doc.name,
-        errors: doc.errors || [],
-        uid: doc.uid,
-        value: doc.cmDoc.getValue(),
-        cursor: doc.cmDoc.getCursor(),
-        selection: doc.cmDoc.sel,
-        scrollLeft: doc.cmDoc.scrollLeft,
-        scrollTop: doc.cmDoc.scrollTop,
-        history: doc.cmDoc.getHistory()
-      });
+      plainDocs.push(serializeDocument(doc));
     });
-    saveRev = (+localStorage.ppgSaveRevision || 0) + 1;
-    localStorage.ppgSaveRevision = saveRev;
-    localStorage.ppgDocuments = JSON.stringify(plainDocs);
-    localStorage.ppgActiveDoc = docs[activeDoc].uid;
+    savedActive = docs[activeDoc].uid;
+    saveRev = writeSavedDocuments(localStorage, plainDocs, savedActive);
   }
 
   function findActiveDoc() {
-    if (localStorage.ppgActiveDoc) {
-      var uid = +localStorage.ppgActiveDoc;
+    if (savedActive) {
+      var uid = +savedActive;
       for (var i = 0; i < docs.length; i++) {
         if (docs[i].uid === uid) return i;
       }
@@ -307,35 +335,28 @@ window.PPG = (function (self) {
   }
 
   function loadDocuments() {
-    var plainDocs = JSON.parse(localStorage.ppgDocuments || '[]');
-    saveRev = +localStorage.ppgSaveRevision || 0;
-
-    docs = [{ name: 'New document' }];
-
-    plainDocs.forEach(function(doc) {
-      var cmDoc = new CodeMirror.Doc(doc.value, 'text/x-pawn');
-      cmDoc.setHistory(doc.history);
-      cmDoc.setCursor(doc.cursor);
-      cmDoc.setSelections(doc.selection.ranges, doc.selection.primIndex);
-      cmDoc.scrollLeft = doc.scrollLeft;
-      cmDoc.scrollTop = doc.scrollTop;
+    // CM5 documents import their text and selections; CM6 restores full state.
+    const saved = readSavedDocuments(localStorage);
+    const plainDocs = saved.documents;
+    savedActive = saved.active;
+    saveRev = +localStorage[storageKeys.revision] || 0;
+    docs = [{name: 'New document'}];
+    plainDocs.forEach(savedDoc => {
       docs.push({
-        name: doc.name,
-        errors: doc.errors,
-        uid: doc.uid,
-        cmDoc: cmDoc
+        name: savedDoc.name, uid: savedDoc.uid, errors: savedDoc.errors || [],
+        state: restoreEditorState(savedDoc, extensions()),
+        scrollTop: savedDoc.scrollTop || 0, scrollLeft: savedDoc.scrollLeft || 0
       });
     });
-
     if (docs.length === 1) {
-      docs.push({ name: 'demo', uid: +new Date(), cmDoc: demoDoc.copy() });
+      docs.push({name: 'demo', uid: Date.now(), state: EditorState.create({doc: demoCode, extensions: extensions()})});
     }
   }
 
   function deleteDocument(doc) {
     docs.splice(doc, 1);
     if (docs.length === 1) {
-      docs.push({ name: 'demo', uid: +new Date(), cmDoc: demoDoc.copy() });
+      docs.push({name: 'demo', uid: Date.now(), state: EditorState.create({doc: demoCode, extensions: extensions()})});
     }
     if (activeDoc >= docs.length) {
       activeDoc = docs.length - 1;
@@ -349,7 +370,7 @@ window.PPG = (function (self) {
   // Bootstrap 5 uses .dropdown-item, still selectable the same way
   $(document).on('click', '.select-keymap .dropdown-item', function(e) {
     keyMap = $(this).data('keymap');
-    cm.setOption('keyMap', keyMap);
+    view.dispatch({effects: keymapConfig.reconfigure(selectedKeymap())});
     localStorage.keyMap = keyMap;
     $('.keymap-current').text(keyMap);
     // Mark active
@@ -382,29 +403,26 @@ window.PPG = (function (self) {
   $documentList.on('click', 'a', function(e) {
     e.preventDefault();
     setActiveDocument($(this).data('doc-idx'));
-    cm.focus();
+    saveDocuments();
+    view.focus();
     return false;
   });
 
   // ---- Public API ----------------------------------------------------------
 
-  self.setEditorFocus = function() { cm.focus(); };
-  self.updateEditorSize = function() { cm.setSize('100%', '100%'); };
-  self.getCurrentCode = function() { return cm.getValue(); };
-  self.setCurrentCode = function(code) { cm.setValue(code); };
+  self.setEditorFocus = function() { view.focus(); };
+  self.updateEditorSize = function() { view.requestMeasure(); };
+  self.getCurrentCode = function() { return view.state.doc.toString(); };
+  self.setCurrentCode = function(code) {
+    view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: code}});
+  };
+  self.highlightCode = highlightCode;
 
   $(window).on({
-    load: function() {
-      cm.on('change', function() {
-        if (lintErrors.length) {
-          self.clearEditorErrors();
-          if (docs[activeDoc]) docs[activeDoc].errors = [];
-        }
-      });
-    },
     resize: function() { self.updateEditorSize(); },
-    unload: function() { saveDocuments(); }
+    pagehide: function() { saveDocuments(); }
   });
+  view.focus();
 
   return self;
 }(window.PPG || {}));

@@ -359,7 +359,7 @@ window.PPG = (function (self) {
     } else {
       var value = output.data || '';
       value = value.replace(/(^#line \d+$\n\s*)+(#line \d+)/mg, '$2').trimLeft();
-      CodeMirror.runMode(value, 'text/x-pawn', $compilerOutputLst.get(0));
+      self.highlightCode(value, 'text/x-pawn', $compilerOutputLst.get(0));
     }
   }
 
@@ -416,7 +416,7 @@ window.PPG = (function (self) {
       return '; line ' + parseInt(lineNum, 16);
     });
 
-    CodeMirror.runMode(data, 'text/x-pawn-asm', $compilerOutputAsm.get(0));
+    self.highlightCode(data, 'text/x-pawn-asm', $compilerOutputAsm.get(0));
   }
 
   function onProgramOutput(output) {

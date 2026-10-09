@@ -11,10 +11,28 @@ tasks:
     deps: [build]
     silent: true
 
+  editor:
+    desc: Build web editor
+    cmds:
+      - npm ci
+      - npm run build
+    sources:
+      - package.json
+      - package-lock.json
+      - web/js/ppg-editor.js
+      - web/js/ppg-editor-state.js
+      - web/js/ppg-editor-theme.js
+      - web/js/ppg-language.js
+      - web/js/pawn*-language.js
+    generates:
+      - node_modules/.package-lock.json
+      - web/js/ppg-editor.bundle.js
+
   build:
     desc: Compile the Go server binary
+    deps: [editor]
     cmds:
-      - go build -o {{.BINARY}} ./cmd/server/
+      - CGO_ENABLED=0 go build -o {{.BINARY}} ./cmd/server/
     sources:
       - '**/*.go'
       - 'web/**/*.html'
@@ -24,29 +42,32 @@ tasks:
       - 'web/wasm/*.data'
     generates:
       - '{{.BINARY}}'
-    env:
-      CGO_ENABLED: '0'
 
   run:
-    desc: Build and run the server (web/wasm/ must exist — run task compiler:wasm to build)
+    desc: Build the editor and run the server
     deps: [build]
     cmds:
       - ./{{.BINARY}}
 
   test:
     desc: Run all tests with race detector
+    deps: [editor]
     cmds:
-      - go test -v -race -timeout 10s ./...
-    env:
-      CGO_ENABLED: '1'
+      - npm test
+      - CGO_ENABLED=1 go test -v -race -timeout 30s ./...
+
+  test:browser:
+    desc: Run editor browser tests (requires Playwright Chromium)
+    deps: [editor]
+    cmds:
+      - npm run test:browser
 
   coverage:
     desc: Run tests and generate HTML coverage report
+    deps: [editor]
     cmds:
-      - go test -coverprofile=coverage.out ./...
+      - CGO_ENABLED=1 go test -coverprofile=coverage.out ./...
       - go tool cover -html=coverage.out -o coverage.html
-    env:
-      CGO_ENABLED: '1'
 
   lint:
     desc: Run golangci-lint

@@ -58,6 +58,17 @@ compiler-wasm:
 
     SAVE ARTIFACT /wasm-out /wasm AS LOCAL web/wasm
 
+editor:
+    FROM node:22-alpine
+    WORKDIR /build
+    COPY package.json package-lock.json ./
+    RUN npm ci
+    COPY web/js/ web/js/
+    COPY web/editor-tests/ web/editor-tests/
+    RUN npm test
+    RUN npm run build
+    SAVE ARTIFACT web/js/ppg-editor.bundle.js /ppg-editor.bundle.js
+
 test:
     FROM golang:1.26-alpine
     RUN apk add --no-cache gcc musl-dev
@@ -67,6 +78,7 @@ test:
     RUN go mod download
 
     COPY . .
+    COPY +editor/ppg-editor.bundle.js web/js/ppg-editor.bundle.js
     RUN go vet ./...
     RUN CGO_ENABLED=1 go test -race -timeout 30s ./...
 
@@ -79,6 +91,7 @@ server:
     RUN go mod download
 
     COPY . .
+    COPY +editor/ppg-editor.bundle.js web/js/ppg-editor.bundle.js
     COPY +compiler-wasm/wasm web/wasm
 
     RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /server ./cmd/server/

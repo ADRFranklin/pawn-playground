@@ -124,7 +124,7 @@ a {
       bottom: 0;
       overflow: hidden;
 
-      .CodeMirror {
+      .cm-editor {
         height: 100%;
       }
     }
@@ -277,77 +277,45 @@ a {
   }
 }
 
-.cm-s-dracula.cm-s-pawn {
+.cm-s-pawn {
   color: #D6D9E3;
   background: #14171C;
 }
 
-.cm-s-dracula.cm-s-pawn .CodeMirror-gutters {
-  background: #14171C;
-}
-
-.cm-s-dracula.cm-s-pawn .CodeMirror-linenumber {
-  color: #667185;
-}
-
-.cm-s-dracula.cm-s-pawn .cm-comment {
+.cm-s-pawn .cm-comment {
   color: #808A9C;
   font-style: normal;
 }
 
-.cm-s-dracula.cm-s-pawn .cm-meta { color: #B69DF0; }
-.cm-s-dracula.cm-s-pawn .cm-keyword { color: #C4A7E7; }
+.cm-s-pawn .cm-meta { color: #B69DF0; }
+.cm-s-pawn .cm-keyword { color: #C4A7E7; }
 
-.cm-s-dracula.cm-s-pawn .cm-builtin,
-.cm-s-dracula.cm-s-pawn .cm-def {
+.cm-s-pawn .cm-builtin,
+.cm-s-pawn .cm-def {
   color: #88C0D0;
   font-weight: normal;
 }
 
-.cm-s-dracula.cm-s-pawn .cm-atom,
-.cm-s-dracula.cm-s-pawn .cm-variable-2 { color: #E5C38B; }
-.cm-s-dracula.cm-s-pawn .cm-number { color: #E8BA88; }
+.cm-s-pawn .cm-atom,
+.cm-s-pawn .cm-variable-2 { color: #E5C38B; }
+.cm-s-pawn .cm-number { color: #E8BA88; }
 
-.cm-s-dracula.cm-s-pawn .cm-string,
-.cm-s-dracula.cm-s-pawn .cm-string-2,
-.cm-s-dracula.cm-s-pawn .cm-link {
+.cm-s-pawn .cm-string,
+.cm-s-pawn .cm-string-2,
+.cm-s-pawn .cm-link {
   color: #A8D5A2;
   text-decoration: none;
 }
 
-.cm-s-dracula.cm-s-pawn .cm-variable,
-.cm-s-dracula.cm-s-pawn .cm-operator,
-.cm-s-dracula.cm-s-pawn .cm-attribute,
-.cm-s-dracula.cm-s-pawn .cm-type {
+.cm-s-pawn .cm-variable,
+.cm-s-pawn .cm-operator,
+.cm-s-pawn .cm-attribute,
+.cm-s-pawn .cm-type {
   color: #D6D9E3;
   font-style: normal;
 }
 
-.cm-s-dracula.cm-s-pawn {
-  .CodeMirror-matchingbracket {
-    color: #f00;
-    font-weight: bold;
-  }
-
-  .CodeMirror-foldgutter-open,
-  .CodeMirror-foldgutter-folded {
-    color: #777;
-
-    &:hover {
-      color: #000;
-    }
-  }
-
-  .CodeMirror-foldmarker {
-    text-shadow: none;
-  }
-
-  .cm-matchhighlight {
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVQI12NgYGBgkKzc8x9CMDAwAAAmhwSbidEoSQAAAABJRU5ErkJggg==);
-    background-position: bottom;
-    background-repeat: repeat-x;
-  }
-
+.cm-s-pawn {
   .line {
     display: block;
   }

@@ -1,4 +1,11 @@
 # syntax=docker/dockerfile:1
+FROM node:22-alpine AS editor
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY web/js/ web/js/
+RUN npm run build
+
 FROM golang:1.26-alpine AS builder
 
 RUN apk add --no-cache git
@@ -9,6 +16,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+COPY --from=editor /build/web/js/ppg-editor.bundle.js web/js/ppg-editor.bundle.js
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /server ./cmd/server/
 
