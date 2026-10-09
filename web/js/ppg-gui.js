@@ -11,29 +11,46 @@ window.PPG = (function (self) {
   var MIN_EDITOR_HEIGHT = 100;
 
   if (!localStorage.outputHeight) {
-    localStorage.outputHeight = 280;
+    localStorage.outputHeight = Math.round(window.innerHeight * 0.24);
   }
   setOutputHeight(+localStorage.outputHeight);
+
+  // Keep output line numbers in sync with the visible result panel.
+  var outputScroller = $output.find('.scroller')[0];
+  var outputGutter = $output.find('.output-gutter')[0];
+  function updateOutputGutter() {
+    var panel = Array.prototype.find.call(outputScroller.querySelectorAll('pre'), function (pre) {
+      return pre.style.display !== 'none';
+    });
+    var count = panel ? panel.textContent.replace(/\n$/, '').split('\n').length : 1;
+    var numbers = [];
+    for (var line = 1; line <= count; line++) numbers.push(line);
+    var text = numbers.join('\n');
+    if (outputGutter.textContent !== text) outputGutter.textContent = text;
+  }
+  new MutationObserver(updateOutputGutter).observe(outputScroller, {
+    childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style']
+  });
 
   /* ---- Sidebar toggle (mobile) ----------------------------------------- */
 
   var $sidebarToggle = $('#sidebar-toggle');
   var $sidebarOverlay = $('#sidebar-overlay');
 
-  function openSidebar()  { $app.addClass('sidebar-open'); }
+  function openSidebar() { $app.addClass('sidebar-open'); }
   function closeSidebar() { $app.removeClass('sidebar-open'); }
-  function toggleSidebar(){ $app.toggleClass('sidebar-open'); }
+  function toggleSidebar() { $app.toggleClass('sidebar-open'); }
 
-  $sidebarToggle.on('click', function(e) { e.stopPropagation(); toggleSidebar(); });
+  $sidebarToggle.on('click', function (e) { e.stopPropagation(); toggleSidebar(); });
   $sidebarOverlay.on('click', closeSidebar);
 
   /* Close sidebar when a document link is clicked on mobile. */
-  $app.find('.sidebar').on('click', '.document-list a, .document-list .list-group-item', function() {
+  $app.find('.document-list').on('click', 'a, .list-group-item', function () {
     if ($(window).width() <= 767) closeSidebar();
   });
 
   /* Close sidebar on resize back to desktop. */
-  $(window).on('resize', function() {
+  $(window).on('resize', function () {
     if ($(window).width() > 767) closeSidebar();
   });
 
@@ -42,13 +59,13 @@ window.PPG = (function (self) {
   var separatorDrag = null;
 
   $(window).on({
-    load: function() {
-      requestAnimationFrame(function() {
+    load: function () {
+      requestAnimationFrame(function () {
         $body.addClass('visible');
         self.updateEditorSize();
       });
     },
-    mousemove: function(e) {
+    mousemove: function (e) {
       if (separatorDrag === null) return;
       var windowHeight = $(window).height();
       var rawHeight = windowHeight - e.clientY + separatorDrag;
@@ -57,7 +74,7 @@ window.PPG = (function (self) {
       localStorage.outputHeight = height;
       self.updateEditorSize();
     },
-    mouseup: function() {
+    mouseup: function () {
       if (separatorDrag !== null) {
         separatorDrag = null;
         $outputSeparator.removeClass('dragging');
@@ -65,7 +82,7 @@ window.PPG = (function (self) {
     }
   });
 
-  $outputSeparator.on('mousedown', function(e) {
+  $outputSeparator.on('mousedown', function (e) {
     // offsetY: distance from top of separator bar to where user clicked
     separatorDrag = $(this).height() - e.offsetY;
     $outputSeparator.addClass('dragging');
@@ -73,13 +90,13 @@ window.PPG = (function (self) {
   });
 
   // Touch drag support for the separator (mobile / tablet).
-  $outputSeparator.on('touchstart', function(e) {
+  $outputSeparator.on('touchstart', function (e) {
     var touch = e.originalEvent.touches[0];
     separatorDrag = $(this).height() - (touch.clientY - $(this).offset().top);
     $outputSeparator.addClass('dragging');
     e.preventDefault();
   });
-  $(window).on('touchmove', function(e) {
+  $(window).on('touchmove', function (e) {
     if (separatorDrag === null) return;
     var touch = e.originalEvent.touches[0];
     var windowHeight = $(window).height();
@@ -90,7 +107,7 @@ window.PPG = (function (self) {
     self.updateEditorSize();
     e.preventDefault();
   });
-  $(window).on('touchend touchcancel', function() {
+  $(window).on('touchend touchcancel', function () {
     if (separatorDrag !== null) {
       separatorDrag = null;
       $outputSeparator.removeClass('dragging');
