@@ -27,30 +27,15 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
     if (state.definePhase === 'name') {
       state.definePhase = null;
       if (!stream.eol() && stream.match(/^[A-Za-z_]\w*/)) {
+        state.macros = state.macros.concat(stream.current());
         state.definePhase = 'body';
-        return "def";
+        return "atom";
       }
     }
-    // Tokenize the body of a #define: %0-%9 as "variable-2", rest as "attribute".
+    // Keep macro placeholders distinct while recognising ordinary Pawn literals.
     if (state.definePhase === 'body') {
-      if (stream.eol()) { state.definePhase = null; return null; }
-      if (stream.match(/^%%|^%[0-9]/)) {
-        if (stream.eol()) state.definePhase = null;
-        return "variable-2";
-      }
-      if (stream.peek() === '\\') {
-        stream.next();
-        if (stream.eol()) { return "attribute"; } // backslash continuation
-        stream.next();
-        return "attribute";
-      }
-      while (!stream.eol()) {
-        var bc = stream.peek();
-        if (bc === '%' || bc === '\\') break;
-        stream.next();
-      }
-      if (stream.eol()) state.definePhase = null;
-      return "attribute";
+      if (stream.match(/^%%|^%[0-9]/)) return "variable-2";
+      if (stream.peek() === '\\' && stream.match(/^\\\s*$/)) return null;
     }
     var ch = stream.next();
     if (hooks[ch]) {
@@ -81,13 +66,14 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
     if (/\d/.test(ch)) {
       if (ch === '0' && (stream.peek() === 'x' || stream.peek() === 'X')) {
         stream.next();
-        stream.eatWhile(/[0-9a-fA-F]/);
+        stream.eatWhile(/[0-9a-fA-F_]/);
       } else if (ch === '0' && (stream.peek() === 'b' || stream.peek() === 'B')) {
         stream.next();
-        stream.eatWhile(/[01]/);
+        stream.eatWhile(/[01_]/);
       } else {
         stream.eatWhile(/[\d_]/);
-        if (stream.eat('.')) stream.eatWhile(/[\d_]/);
+        stream.match(/^\.[\d_]+/);
+        stream.match(/^[eE][+-]?[\d_]+/);
       }
       return "number";
     }
@@ -112,14 +98,14 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
       return "keyword";
     }
     if (builtin.propertyIsEnumerable(cur)) return "builtin";
-    if (atoms.propertyIsEnumerable(cur)) return "atom";
+    if (atoms.propertyIsEnumerable(cur) || state.macros.indexOf(cur) !== -1) return "atom";
     // ALL_CAPS_CONVENTION: 3+ char all-uppercase identifiers are user-defined
     // constants (#define values, enum members) not yet in the atoms list.
     if (/^[A-Z][A-Z0-9_]{2,}$/.test(cur)) return "atom";
     // Function definition: identifier followed by '(' after a declaration keyword
     // (forward/native/public/stock/static).  Tag annotations in between — e.g.
     // `public Float:Func(` — keep insideDecl set through the type token so Func
-    // is still coloured green.
+    // is still recognised as a function.
     if (state.insideDecl === 'func' && stream.peek() === '(') return "def";
     // Enum / methodmap name: the bare identifier immediately after the keyword.
     // Anonymous enum `enum { ... }` never reaches here — '{' clears insideDecl first.
@@ -127,6 +113,7 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
     // Pawn type tag: identifier immediately followed by ':' (e.g. Float:, bool:)
     // Skip for case/default labels so constants there aren't coloured as types.
     if (stream.peek() === ':' && state.lastKeyword !== 'case' && state.lastKeyword !== 'default') return "type";
+    if (stream.match(/^\s*\(/, false)) return "def";
     return "variable";
   }
 
@@ -222,6 +209,7 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
         startOfLine: true,
         lastKeyword: null,
         insideDecl: false,  // 'func'|'name'|false — set by decl keywords, cleared on non-type token
+        macros: [],         // replaced on definition so copied editor states stay independent
         definePhase: null   // 'name' — set by #define hook, consumed by tokenBase
       };
     },
@@ -234,9 +222,13 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
         state.startOfLine = true;
         if (state.definePhase === 'name') state.definePhase = null;  // clear orphaned #define-name state; 'body' persists for multi-line macros
       }
-      if (stream.eatSpace()) return null;
+      if (stream.eatSpace()) {
+        if (stream.eol()) state.definePhase = null;
+        return null;
+      }
       curPunc = null;
       var style = (state.tokenize || tokenBase)(stream, state);
+      if (stream.eol() && !/\\\s*$/.test(stream.current())) state.definePhase = null;
       if (style == "comment" || style == "meta") return style;
       if (style == "keyword") {
         var kw = stream.current();
@@ -308,28 +300,6 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
     return "meta";
   }
 
-  // Tokenises the body of a #define: %0-%9 and %% as "variable-2", rest as "attribute".
-  function tokenDefineBody(stream, state) {
-    if (stream.eol()) { state.tokenize = null; return null; }
-    if (stream.match(/^%%|^%[0-9]/)) {
-      if (stream.eol()) state.tokenize = null; // don't bleed into next line
-      return "variable-2";
-    }
-    if (stream.peek() === '\\') {
-      stream.next();
-      if (stream.eol()) { state.tokenize = tokenDefineBody; return "attribute"; }
-      stream.next();
-      return "attribute";
-    }
-    while (!stream.eol()) {
-      var c = stream.peek();
-      if (c === '%' || c === '\\') break;
-      stream.next();
-    }
-    if (stream.eol()) state.tokenize = null;
-    return "attribute";
-  }
-
   // Emits the path argument of #include (<file> or "file") as "string", rest as meta.
   function tokenIncludePath(stream, state) {
     stream.eatSpace();
@@ -338,13 +308,15 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
     if (ch === '<') {
       stream.next();
       stream.skipTo('>'); stream.next();
-      state.tokenize = cppLineRest;
+      stream.eatSpace();
+      state.tokenize = stream.eol() ? null : cppLineRest;
       return "link";
     }
     if (ch === '"') {
       stream.next();
       stream.skipTo('"'); stream.next();
-      state.tokenize = cppLineRest;
+      stream.eatSpace();
+      state.tokenize = stream.eol() ? null : cppLineRest;
       return "link";
     }
     // Unusual — fall back to meta.
@@ -355,10 +327,10 @@ CodeMirror.defineMode("pawn", function(config, parserConfig) {
     if (!state.startOfLine) return false;
     var m = stream.match(/^[a-z_]+/);  // eat directive name
     if (m && m[0] === 'define') {
-      state.definePhase = 'name'; // tokenBase will consume the macro name as "def"
+      state.definePhase = 'name'; // tokenBase consumes the macro name as "atom"
       return "meta";  // "#define" itself coloured meta
     }
-    if (m && m[0] === 'include') {
+    if (m && (m[0] === 'include' || m[0] === 'tryinclude')) {
       state.tokenize = tokenIncludePath;
       return "meta";  // "#include" coloured meta; path follows as string
     }

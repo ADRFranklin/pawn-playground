@@ -277,28 +277,53 @@ a {
   }
 }
 
-.cm-s-default.cm-s-pawn {
-  .cm-comment {
-    color: #272;
-  }
+.cm-s-dracula.cm-s-pawn {
+  color: #D6D9E3;
+  background: #14171C;
+}
 
-  .cm-meta {
-    color: #900;
-  }
+.cm-s-dracula.cm-s-pawn .CodeMirror-gutters {
+  background: #14171C;
+}
 
-  .cm-keyword {
-    color: #00c;
-    font-weight: bold;
-  }
+.cm-s-dracula.cm-s-pawn .CodeMirror-linenumber {
+  color: #667185;
+}
 
-  .cm-number {
-    color: #c00;
-  }
+.cm-s-dracula.cm-s-pawn .cm-comment {
+  color: #808A9C;
+  font-style: normal;
+}
 
-  .cm-string {
-    color: #555;
-  }
+.cm-s-dracula.cm-s-pawn .cm-meta { color: #B69DF0; }
+.cm-s-dracula.cm-s-pawn .cm-keyword { color: #C4A7E7; }
 
+.cm-s-dracula.cm-s-pawn .cm-builtin,
+.cm-s-dracula.cm-s-pawn .cm-def {
+  color: #88C0D0;
+  font-weight: normal;
+}
+
+.cm-s-dracula.cm-s-pawn .cm-atom,
+.cm-s-dracula.cm-s-pawn .cm-variable-2 { color: #E5C38B; }
+.cm-s-dracula.cm-s-pawn .cm-number { color: #E8BA88; }
+
+.cm-s-dracula.cm-s-pawn .cm-string,
+.cm-s-dracula.cm-s-pawn .cm-string-2,
+.cm-s-dracula.cm-s-pawn .cm-link {
+  color: #A8D5A2;
+  text-decoration: none;
+}
+
+.cm-s-dracula.cm-s-pawn .cm-variable,
+.cm-s-dracula.cm-s-pawn .cm-operator,
+.cm-s-dracula.cm-s-pawn .cm-attribute,
+.cm-s-dracula.cm-s-pawn .cm-type {
+  color: #D6D9E3;
+  font-style: normal;
+}
+
+.cm-s-dracula.cm-s-pawn {
   .CodeMirror-matchingbracket {
     color: #f00;
     font-weight: bold;

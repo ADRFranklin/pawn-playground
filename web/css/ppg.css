@@ -459,17 +459,17 @@ a {
   font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text);
-  background: var(--bg) !important;
+  color: #D6D9E3;
+  background: #14171C !important;
 }
 
 .app .main .editor .CodeMirror .CodeMirror-gutters {
-  background: #191d24 !important;
+  background: #14171C !important;
   border-right: 1px solid var(--border) !important;
 }
 
 .app .main .editor .CodeMirror .CodeMirror-linenumber {
-  color: var(--text-hint) !important;
+  color: #667185 !important;
 }
 
 /* ---- Output pane -------------------------------------------------------- */
@@ -580,86 +580,53 @@ a {
   text-align: center;
 }
 
-/* ---- CodeMirror syntax colours from the reference ----------------------- */
+/* ---- Pawn syntax palette ------------------------------------------------ */
+
+.cm-s-dracula.cm-s-pawn {
+  color: #D6D9E3;
+  background: #14171C;
+}
+
+.cm-s-dracula.cm-s-pawn .CodeMirror-gutters {
+  background: #14171C;
+}
+
+.cm-s-dracula.cm-s-pawn .CodeMirror-linenumber {
+  color: #667185;
+}
 
 .cm-s-dracula.cm-s-pawn .cm-comment {
-  color: #7e8ba1;
-  font-style: italic;
+  color: #808A9C;
+  font-style: normal;
 }
 
-/* grey italic             */
-.cm-s-dracula.cm-s-pawn .cm-meta {
-  color: #cf78ed;
+.cm-s-dracula.cm-s-pawn .cm-meta { color: #B69DF0; }
+.cm-s-dracula.cm-s-pawn .cm-keyword { color: #C4A7E7; }
+
+.cm-s-dracula.cm-s-pawn .cm-builtin,
+.cm-s-dracula.cm-s-pawn .cm-def {
+  color: #88C0D0;
+  font-weight: normal;
 }
 
-/* preprocessor #directive */
-.cm-s-dracula.cm-s-pawn .cm-keyword {
-  color: #cf78ed;
-}
+.cm-s-dracula.cm-s-pawn .cm-atom,
+.cm-s-dracula.cm-s-pawn .cm-variable-2 { color: #E5C38B; }
+.cm-s-dracula.cm-s-pawn .cm-number { color: #E8BA88; }
 
-/* purple — for/if/new     */
-.cm-s-dracula.cm-s-pawn .cm-builtin {
-  color: #45bfff;
-}
-
-/* blue — built-in API     */
-.cm-s-dracula.cm-s-pawn .cm-type {
-  color: #e5c07b;
-  font-style: italic;
-}
-
-/* yellow — Float: tags    */
-.cm-s-dracula.cm-s-pawn .cm-atom {
-  color: #f5a44b;
-}
-
-/* orange — constants      */
-.cm-s-dracula.cm-s-pawn .cm-number {
-  color: #f5a44b;
-}
-
-/* orange — number literals*/
-.cm-s-dracula.cm-s-pawn .cm-string {
-  color: #9bdd73;
-}
-
-/* green — string literals */
+.cm-s-dracula.cm-s-pawn .cm-string,
+.cm-s-dracula.cm-s-pawn .cm-string-2,
 .cm-s-dracula.cm-s-pawn .cm-link {
-  color: #9bdd73;
+  color: #A8D5A2;
   text-decoration: none;
 }
 
-/* green — #include path   */
-.cm-s-dracula.cm-s-pawn .cm-string-2 {
-  color: #9bdd73;
+.cm-s-dracula.cm-s-pawn .cm-variable,
+.cm-s-dracula.cm-s-pawn .cm-operator,
+.cm-s-dracula.cm-s-pawn .cm-attribute,
+.cm-s-dracula.cm-s-pawn .cm-type {
+  color: #D6D9E3;
+  font-style: normal;
 }
-
-/* green — \n %d {RRGGBB}  */
-.cm-s-dracula.cm-s-pawn .cm-operator {
-  color: #b1d6fa;
-}
-
-/* neutral — + = < etc     */
-.cm-s-dracula.cm-s-pawn .cm-variable {
-  color: #b1d6fa;
-}
-
-.cm-s-dracula.cm-s-pawn .cm-attribute {
-  color: #ffd05a;
-}
-
-/* yellow — #define body   */
-.cm-s-dracula.cm-s-pawn .cm-variable-2 {
-  color: #e5c07b;
-}
-
-/* yellow — macro params %1*/
-.cm-s-dracula.cm-s-pawn .cm-def {
-  color: #45bfff;
-  font-weight: 500;
-}
-
-/* blue — function names   */
 
 .cm-s-dracula.cm-s-pawn .CodeMirror-matchingbracket {
   color: #56b6c2 !important;
